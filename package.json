@@ -1,0 +1,33 @@
+{
+  "name": "viu-th-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "download:youtube": "tsx scripts/download-youtube.ts",
+    "scrape:episodes": "tsx scripts/scrape-viu-episodes.ts"
+  },
+  "dependencies": {
+    "@distube/ytdl-core": "^4.14.4",
+    "@supabase/supabase-js": "^2.98.0",
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-lite-youtube-embed": "^3.5.1",
+    "react-youtube": "^10.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^15.1.6",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.0.0"
+  }
+}
