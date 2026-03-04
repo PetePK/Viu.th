@@ -68,6 +68,50 @@ export default function HomePage() {
               />
             );
           }
+          // Insert AIS Fibre ad before ซีรีส์เกาหลีโรแมนติก
+          if (category.id === 'korean_romance') {
+            return (
+              <div key={`ad-ais-${category.id}`}>
+                <div style={{
+                  padding: '0 var(--gutter)',
+                  marginBottom: '32px',
+                }}>
+                  <div style={{
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    cursor: 'pointer',
+                  }}>
+                    <img
+                      src="/images/ads/ais-fibre.jpg"
+                      alt="AIS Fibre"
+                      style={{
+                        width: '100%',
+                        height: 'auto',
+                        display: 'block',
+                      }}
+                    />
+                    <div style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '10px',
+                      fontSize: '10px',
+                      color: 'rgba(255,255,255,0.5)',
+                      backgroundColor: 'rgba(0,0,0,0.4)',
+                      padding: '2px 6px',
+                      borderRadius: '3px',
+                    }}>
+                      AD
+                    </div>
+                  </div>
+                </div>
+                <ContentRow
+                  category={category}
+                  onContentClick={handleContentClick}
+                />
+              </div>
+            );
+          }
           return (
             <ContentRow
               key={category.id}

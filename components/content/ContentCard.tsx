@@ -55,7 +55,7 @@ export default function ContentCard({ content, onCardClick, rank }: ContentCardP
       style={{
         position: 'relative',
         flexShrink: '0',
-        width: '220px',
+        width: 'clamp(220px, 19vw, 264px)',
         cursor: 'pointer'
       }}
       onMouseEnter={handleMouseEnter}
