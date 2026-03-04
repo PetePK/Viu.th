@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import Link from 'next/link';
 import Navigation from '@/components/navigation/Navigation';
 import CategoryPage from '@/components/category/CategoryPage';
 import { allContent } from '@/data/mockData';
@@ -87,7 +88,7 @@ export default async function ShowsCategoryPage({ params }: PageProps) {
             }}>
               ไม่พบหมวดหมู่ที่คุณต้องการ
             </p>
-            <a
+            <Link
               href="/"
               style={{
                 display: 'inline-block',
@@ -100,7 +101,7 @@ export default async function ShowsCategoryPage({ params }: PageProps) {
               }}
             >
               กลับหน้าแรก
-            </a>
+            </Link>
           </div>
         </div>
       </>
