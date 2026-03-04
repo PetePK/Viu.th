@@ -366,7 +366,19 @@ p {
 @media (min-width: 640px) {
   .top10-grid {
     grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+}
+@media (min-width: 768px) {
+  .top10-grid {
+    grid-template-columns: repeat(5, 1fr);
     gap: 16px;
+  }
+}
+@media (min-width: 1024px) {
+  .top10-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 18px;
   }
 }
 

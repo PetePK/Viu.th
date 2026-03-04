@@ -50,7 +50,7 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
       }}>
         {/* Left: Top 10 Card Grid - 3 columns */}
         <div className="top10-grid" style={{ flex: '1' }}>
-          {content.slice(0, 9).map((item, index) => (
+          {content.slice(0, 10).map((item, index) => (
             <div
               key={item.id}
               onClick={() => onContentClick(item)}
