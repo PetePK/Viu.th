@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
-import YouTube, { YouTubeEvent } from 'react-youtube';
+import { useEffect, useMemo } from 'react';
 import { ReelItem } from '@/data/reelsData';
 import { getViuUrl } from '@/lib/viuUrl';
+import { isTouchDevice } from '@/lib/deviceDetect';
 
 interface ReelPreviewModalProps {
   reel: ReelItem | null;
@@ -11,11 +11,23 @@ interface ReelPreviewModalProps {
 }
 
 export default function ReelPreviewModal({ reel, onClose }: ReelPreviewModalProps) {
-  const handleYouTubeReady = useCallback((event: YouTubeEvent) => {
-    event.target.unMute();
-    event.target.setVolume(80);
-    event.target.playVideo();
-  }, []);
+  const shouldMute = typeof window !== 'undefined' ? isTouchDevice() : true;
+
+  const getEmbedUrl = useMemo(() => {
+    if (!reel) return '';
+    const params = new URLSearchParams({
+      autoplay: '1',
+      mute: shouldMute ? '1' : '0',
+      playsinline: '1',
+      controls: '1',
+      rel: '0',
+      modestbranding: '1',
+      showinfo: '0',
+      enablejsapi: '1',
+      origin: typeof window !== 'undefined' ? window.location.origin : '',
+    });
+    return `https://www.youtube.com/embed/${reel.youtubeId}?${params.toString()}`;
+  }, [reel, shouldMute]);
 
   useEffect(() => {
     if (reel) {
@@ -110,22 +122,19 @@ export default function ReelPreviewModal({ reel, onClose }: ReelPreviewModalProp
             background: '#000',
             overflow: 'hidden',
           }}>
-            <YouTube
-              videoId={reel.youtubeId}
-              opts={{
+            <iframe
+              src={getEmbedUrl}
+              title={reel.titleTh || reel.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
                 width: '100%',
                 height: '100%',
-                playerVars: {
-                  autoplay: 1,
-                  mute: 0,
-                  rel: 0,
-                  modestbranding: 1,
-                  playsinline: 1,
-                },
+                border: 'none',
               }}
-              onReady={handleYouTubeReady}
-              style={{ position: 'absolute', inset: 0 }}
-              iframeClassName="preview-modal-yt-iframe"
             />
 
             {/* Gradient overlay at bottom of video */}
@@ -399,17 +408,6 @@ export default function ReelPreviewModal({ reel, onClose }: ReelPreviewModalProp
         </div>
       </div>
 
-      {/* Styles */}
-      <style jsx global>{`
-        .preview-modal-yt-iframe {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          border: none;
-        }
-      `}</style>
     </>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ReelItem } from '@/data/reelsData';
 import { getViuUrl } from '@/lib/viuUrl';
+import { isTouchDevice } from '@/lib/deviceDetect';
 
 interface ReelsViewerProps {
   reels: ReelItem[];
@@ -22,16 +23,17 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const wheelAccum = useRef(0);
   const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastNavTime = useRef(0);
   const wheelLocked = useRef(false);
 
   const currentReel = reels[currentIndex];
 
-  // Build YouTube embed URL with all autoplay params baked in
+  // Desktop = unmuted autoplay, iPad/mobile = muted for instant play
+  const shouldMute = typeof window !== 'undefined' ? isTouchDevice() : true;
+
   const getEmbedUrl = (youtubeId: string) => {
     const params = new URLSearchParams({
       autoplay: '1',
-      mute: '1',
+      mute: shouldMute ? '1' : '0',
       playsinline: '1',
       controls: '0',
       rel: '0',
