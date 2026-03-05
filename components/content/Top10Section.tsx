@@ -91,41 +91,41 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
             min-width: 0;
           }
           .top10-ads {
-            width: 10%;
+            width: 20%;
             flex-shrink: 0;
           }
         }
 
-        /* === Grid === */
+        /* === Grid — fixed card size, blank space is fine === */
         .top10-grid {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: repeat(2, clamp(140px, 19vw, 264px));
           gap: 12px;
         }
 
         @media (min-width: 576px) {
           .top10-grid {
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(3, clamp(140px, 19vw, 264px));
             gap: 16px;
           }
         }
 
         @media (min-width: 768px) {
           .top10-grid {
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(4, clamp(140px, 17vw, 264px));
           }
         }
 
         @media (min-width: 1024px) {
           .top10-grid {
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(4, clamp(140px, 14vw, 264px));
             gap: 18px;
           }
         }
 
         @media (min-width: 1280px) {
           .top10-grid {
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(5, clamp(140px, 12vw, 264px));
             gap: 20px;
           }
         }
@@ -164,7 +164,7 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
         .top10-premium {
           background: linear-gradient(135deg, #1a0a2e 0%, #16213e 50%, #0a1628 100%);
           border: 1px solid rgba(255, 191, 0, 0.2);
-          padding: 12px 10px;
+          padding: 16px 14px;
           position: relative;
           overflow: hidden;
         }
@@ -180,7 +180,7 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
         }
 
         .top10-premium-label {
-          font-size: 9px;
+          font-size: 10px;
           color: #FFBF00;
           font-weight: 700;
           letter-spacing: 0.5px;
@@ -189,7 +189,7 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
         }
 
         .top10-premium-title {
-          font-size: 11px;
+          font-size: 13px;
           font-weight: 800;
           color: #FFFFFF;
           margin: 0 0 4px 0;
@@ -206,13 +206,13 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
 
         .top10-premium-btn {
           width: 100%;
-          padding: 6px 8px;
+          padding: 8px 10px;
           background: linear-gradient(135deg, #FFBF00, #FF8C00);
           border: none;
           border-radius: 6px;
           color: #000;
           font-weight: 700;
-          font-size: 9px;
+          font-size: 11px;
           cursor: pointer;
           transition: transform 0.2s, box-shadow 0.2s;
           white-space: nowrap;
