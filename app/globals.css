@@ -357,12 +357,17 @@ p {
   }
 }
 
+/* === PAGE CONTENT WRAPPER === */
+.page-content {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 /* === TOP 10 RESPONSIVE GRID === */
 .top10-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-  padding: 0 var(--gutter);
 }
 @media (min-width: 640px) {
   .top10-grid {
@@ -374,12 +379,6 @@ p {
   .top10-grid {
     grid-template-columns: repeat(5, 1fr);
     gap: 16px;
-  }
-}
-@media (min-width: 1024px) {
-  .top10-grid {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 18px;
   }
 }
 

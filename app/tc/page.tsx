@@ -69,14 +69,16 @@ export default function TCPage() {
       {/* Navigation */}
       <Navigation />
 
-      {/* Hero Section */}
-      <HeroSection
-        featuredContent={featuredContent}
-        onMoreInfo={handleMoreInfo}
-      />
+      {/* Page Content Wrapper — aligns hero, content, footer */}
+      <div className="page-content">
+        {/* Hero Section */}
+        <HeroSection
+          featuredContent={featuredContent}
+          onMoreInfo={handleMoreInfo}
+        />
 
-      {/* Content Rows */}
-      <div className="relative -mt-24 md:-mt-32 z-10 pb-16">
+        {/* Content Rows */}
+        <div className="relative -mt-24 md:-mt-32 z-10 pb-16">
         {/* Short Reels Section - Featured prominently as first section */}
         <ReelsSection
           reels={reelsData}
@@ -104,8 +106,9 @@ export default function TCPage() {
         })}
       </div>
 
-      {/* Footer */}
-      <Footer />
+        {/* Footer */}
+        <Footer />
+      </div>
 
       {/* Content Detail Modal */}
       <ContentDetailModal content={selectedContent} onClose={handleCloseModal} />

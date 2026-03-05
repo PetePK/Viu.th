@@ -49,14 +49,16 @@ export default function HomePage() {
       {/* Navigation */}
       <Navigation />
 
-      {/* Hero Section with Video Autoplay */}
-      <HeroSection
-        featuredContent={featuredContent}
-        onMoreInfo={handleMoreInfo}
-      />
+      {/* Page Content Wrapper — aligns hero, content, footer */}
+      <div className="page-content">
+        {/* Hero Section with Video Autoplay */}
+        <HeroSection
+          featuredContent={featuredContent}
+          onMoreInfo={handleMoreInfo}
+        />
 
-      {/* Content Rows - Overlapping hero section */}
-      <div className="relative -mt-24 md:-mt-32 z-10 pb-16">
+        {/* Content Rows - Overlapping hero section */}
+        <div className="relative -mt-24 md:-mt-32 z-10 pb-16">
         {homeCategories.map((category) => {
           // Render Top 10 with dedicated section
           if (category.type === 'top10') {
@@ -122,8 +124,9 @@ export default function HomePage() {
         })}
       </div>
 
-      {/* Footer */}
-      <Footer />
+        {/* Footer */}
+        <Footer />
+      </div>
 
       {/* Content Detail Modal */}
       <ContentDetailModal content={selectedContent} onClose={handleCloseModal} />
