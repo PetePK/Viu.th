@@ -96,7 +96,7 @@ const rawContent: Content[] = [
     description: 'เรื่องราวความรักแสนหวานของคู่รัก',
     year: 2024,
     rating: 4.8,
-    youtubeTrailerId: 'rEZYnCrLrzU',
+    youtubeTrailerId: 'kNJHaz3VgJI',
   },
   {
     id: '8',

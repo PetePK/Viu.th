@@ -362,6 +362,7 @@ p {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
+  padding: 0 var(--gutter);
 }
 @media (min-width: 640px) {
   .top10-grid {
