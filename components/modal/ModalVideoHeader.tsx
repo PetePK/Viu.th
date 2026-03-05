@@ -1,44 +1,45 @@
 'use client';
 
-import { useCallback } from 'react';
-import YouTube, { YouTubeEvent } from 'react-youtube';
+import { useMemo } from 'react';
 import { Content } from '@/types';
+import { isTouchDevice } from '@/lib/deviceDetect';
 
 interface ModalVideoHeaderProps {
   content: Content;
 }
 
 export default function ModalVideoHeader({ content }: ModalVideoHeaderProps) {
-  const handleYouTubeReady = useCallback((event: YouTubeEvent) => {
-    const player = event.target;
-    player.unMute();
-    player.setVolume(80);
-    player.playVideo();
-  }, []);
+  const shouldMute = typeof window !== 'undefined' ? isTouchDevice() : true;
+
+  const embedUrl = useMemo(() => {
+    if (!content.youtubeTrailerId) return '';
+    const params = new URLSearchParams({
+      autoplay: '1',
+      mute: shouldMute ? '1' : '0',
+      playsinline: '1',
+      controls: '1',
+      rel: '0',
+      modestbranding: '1',
+      showinfo: '0',
+      enablejsapi: '1',
+      origin: typeof window !== 'undefined' ? window.location.origin : '',
+    });
+    if (content.youtubeTrailerStart) {
+      params.set('start', String(content.youtubeTrailerStart));
+    }
+    return `https://www.youtube.com/embed/${content.youtubeTrailerId}?${params.toString()}`;
+  }, [content.youtubeTrailerId, content.youtubeTrailerStart, shouldMute]);
 
   return (
     <div className="modal-video-header">
       {content.youtubeTrailerId ? (
         <div className="modal-video-container">
-          <YouTube
-            videoId={content.youtubeTrailerId}
-            opts={{
-              width: '100%',
-              height: '100%',
-              playerVars: {
-                autoplay: 1,
-                mute: 0,
-                rel: 0,
-                modestbranding: 1,
-                playsinline: 1,
-                ...(content.youtubeTrailerStart
-                  ? { start: content.youtubeTrailerStart }
-                  : {}),
-              },
-            }}
-            onReady={handleYouTubeReady}
-            style={{ position: 'absolute', inset: 0 }}
-            iframeClassName="modal-yt-iframe"
+          <iframe
+            src={embedUrl}
+            title={content.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="modal-yt-iframe"
           />
         </div>
       ) : content.thumbnail ? (
