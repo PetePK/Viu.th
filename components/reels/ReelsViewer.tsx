@@ -24,6 +24,7 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
   const wheelAccum = useRef(0);
   const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastNavTime = useRef(0);
+  const hasInteracted = useRef(false);
 
   const currentReel = reels[currentIndex];
 
@@ -90,6 +91,18 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
     let touchStartY = 0;
     const handleTouchStart = (e: TouchEvent) => {
       touchStartY = e.touches[0].clientY;
+
+      // First touch: mark as interacted and unmute current video
+      if (!hasInteracted.current) {
+        hasInteracted.current = true;
+        if (playerRef.current) {
+          try {
+            playerRef.current.unMute();
+            playerRef.current.setVolume(80);
+            playerRef.current.playVideo();
+          } catch { /* ignore */ }
+        }
+      }
     };
     const handleTouchEnd = (e: TouchEvent) => {
       const diff = touchStartY - e.changedTouches[0].clientY;
@@ -116,12 +129,32 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
   const handleYouTubeReady = useCallback((event: YouTubeEvent) => {
     playerRef.current = event.target;
     event.target.playVideo();
-    // Auto-unmute — works on desktop, silently fails on mobile (browser policy)
-    try {
-      event.target.unMute();
-      event.target.setVolume(80);
-    } catch {
-      // Mobile stays muted until user interaction
+
+    // If user has already interacted (swiped/tapped), unmute immediately
+    // Otherwise stays muted — mobile browser policy requires gesture first
+    if (hasInteracted.current) {
+      try {
+        event.target.unMute();
+        event.target.setVolume(80);
+      } catch { /* ignore */ }
+    } else {
+      // Desktop: try to unmute (works if browser allows)
+      try {
+        event.target.unMute();
+        event.target.setVolume(80);
+      } catch { /* stays muted */ }
+    }
+  }, []);
+
+  // If autoplay fails (mobile), retry playback on state change
+  const handleStateChange = useCallback((event: YouTubeEvent) => {
+    // YouTube states: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering, 5=cued
+    const state = event.data;
+    if (state === -1 && hasInteracted.current) {
+      // Video unstarted but user has interacted — force play
+      try {
+        event.target.playVideo();
+      } catch { /* ignore */ }
     }
   }, []);
 
@@ -196,13 +229,31 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
                 },
               }}
               onReady={handleYouTubeReady}
+              onStateChange={handleStateChange}
               className="rv-yt-wrapper"
               iframeClassName="reels-yt-iframe"
             />
           </div>
 
-          {/* Transparent touch overlay — captures swipe on top of iframe */}
-          <div ref={touchOverlayRef} className="rv-touch-overlay" />
+          {/* Transparent touch overlay — captures swipe/tap on top of iframe */}
+          <div ref={touchOverlayRef} className="rv-touch-overlay" onClick={() => {
+            if (!hasInteracted.current) {
+              hasInteracted.current = true;
+            }
+            // Toggle play/pause on tap (like TikTok)
+            if (playerRef.current) {
+              try {
+                const state = playerRef.current.getPlayerState();
+                if (state === 1) {
+                  playerRef.current.pauseVideo();
+                } else {
+                  playerRef.current.playVideo();
+                  playerRef.current.unMute();
+                  playerRef.current.setVolume(80);
+                }
+              } catch { /* ignore */ }
+            }
+          }} />
 
           {/* Gradient overlays */}
           <div className="rv-gradient-bottom" />
