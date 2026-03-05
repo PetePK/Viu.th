@@ -363,24 +363,6 @@ p {
   width: 100%;
 }
 
-/* === TOP 10 RESPONSIVE GRID — equal-width cards that fill available space === */
-.top10-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-@media (min-width: 480px) {
-  .top10-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-  }
-}
-@media (min-width: 768px) {
-  .top10-grid {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 16px;
-  }
-}
 
 /* === VIDEO PLAYER === */
 video {

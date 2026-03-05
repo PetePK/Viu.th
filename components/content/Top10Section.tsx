@@ -87,12 +87,12 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
             gap: 24px;
           }
           .top10-main {
-            flex: 58;
+            flex: 1;
             min-width: 0;
           }
           .top10-ads {
-            flex: 42;
-            min-width: 0;
+            width: 10%;
+            flex-shrink: 0;
           }
         }
 
@@ -109,7 +109,7 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
             gap: 16px;
           }
         }
-        
+
         @media (min-width: 768px) {
           .top10-grid {
             grid-template-columns: repeat(4, 1fr);
@@ -117,22 +117,16 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
         }
 
         @media (min-width: 1024px) {
-          /* When side-by-side (58/42 split), 58% width is smaller, so reduce columns back to 2 */
           .top10-grid {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
           }
         }
 
         @media (min-width: 1280px) {
           .top10-grid {
-            grid-template-columns: repeat(3, 1fr);
-          }
-        }
-
-        @media (min-width: 1536px) {
-          .top10-grid {
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
           }
         }
 
@@ -170,8 +164,9 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
         .top10-premium {
           background: linear-gradient(135deg, #1a0a2e 0%, #16213e 50%, #0a1628 100%);
           border: 1px solid rgba(255, 191, 0, 0.2);
-          padding: 20px 16px;
+          padding: 12px 10px;
           position: relative;
+          overflow: hidden;
         }
 
         .top10-premium-glow {
@@ -185,16 +180,16 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
         }
 
         .top10-premium-label {
-          font-size: 12px;
+          font-size: 9px;
           color: #FFBF00;
           font-weight: 700;
-          letter-spacing: 1px;
-          margin-bottom: 6px;
+          letter-spacing: 0.5px;
+          margin-bottom: 4px;
           text-transform: uppercase;
         }
 
         .top10-premium-title {
-          font-size: 16px;
+          font-size: 11px;
           font-weight: 800;
           color: #FFFFFF;
           margin: 0 0 4px 0;
@@ -202,23 +197,25 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
         }
 
         .top10-premium-desc {
-          font-size: 11px;
+          font-size: 9px;
           color: #B3B3B3;
-          margin: 0 0 12px 0;
+          margin: 0 0 8px 0;
           line-height: 1.4;
+          display: none;
         }
 
         .top10-premium-btn {
           width: 100%;
-          padding: 10px 16px;
+          padding: 6px 8px;
           background: linear-gradient(135deg, #FFBF00, #FF8C00);
           border: none;
-          border-radius: 8px;
+          border-radius: 6px;
           color: #000;
           font-weight: 700;
-          font-size: 13px;
+          font-size: 9px;
           cursor: pointer;
           transition: transform 0.2s, box-shadow 0.2s;
+          white-space: nowrap;
         }
         .top10-premium-btn:hover {
           transform: scale(1.02);
@@ -234,6 +231,7 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
           width: 100%;
           height: auto;
           display: block;
+          object-fit: contain;
         }
 
         .top10-ad-badge {
