@@ -340,15 +340,14 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
           padding: 12px 16px;
           background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
         }
-        .rv-close-btn, .rv-library-btn {
+        .rv-close-btn {
           width: 40px; height: 40px;
           background: rgba(255,255,255,0.1); backdrop-filter: blur(12px);
           border-radius: 50%; display: flex; align-items: center; justify-content: center;
           border: 1px solid rgba(255,255,255,0.15); cursor: pointer; color: #fff;
           transition: background 0.2s;
         }
-        .rv-close-btn:hover, .rv-library-btn:hover { background: rgba(255,255,255,0.2); }
-        .rv-library-btn.active { background: rgba(255,191,0,0.25); border-color: rgba(255,191,0,0.4); color: #FFBF00; }
+        .rv-close-btn:hover { background: rgba(255,255,255,0.2); }
 
         /* ===== Main — FULL WIDTH, FULL HEIGHT ===== */
         .rv-main {
@@ -475,84 +474,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
         .rv-nav-up { top: 50%; left: 24px; transform: translateY(-70%); }
         .rv-nav-down { top: 50%; left: 24px; transform: translateY(30%); }
 
-        /* ===== Progress dots (hidden on mobile) ===== */
-        .rv-dots {
-          display: none; position: absolute; z-index: 10;
-          top: 50%; right: 12px; transform: translateY(-50%);
-          flex-direction: column; gap: 6px;
-        }
-        .rv-dot {
-          width: 4px; height: 8px; border-radius: 2px;
-          background: rgba(255,255,255,0.3); border: none; padding: 0;
-          cursor: pointer; transition: all 0.3s ease;
-        }
-        .rv-dot.active { height: 20px; background: #FFBF00; }
-
-        /* ===== Library panel ===== */
-        .rv-library-overlay {
-          position: absolute; inset: 0; z-index: 130;
-          background: rgba(0,0,0,0.5);
-          animation: fadeIn 0.2s ease-out;
-        }
-        .rv-library {
-          position: absolute; top: 0; right: 0; bottom: 0;
-          width: 300px; max-width: 85vw;
-          background: rgba(20,20,20,0.97); backdrop-filter: blur(20px);
-          border-left: 1px solid rgba(255,255,255,0.08);
-          display: flex; flex-direction: column;
-          animation: slideInRight 0.3s ease-out;
-        }
-        .rv-library-header {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.1);
-          flex-shrink: 0;
-        }
-        .rv-library-header h3 { font-size: 16px; font-weight: 700; color: #fff; margin: 0; }
-        .rv-library-close {
-          background: none; border: none; color: #B3B3B3; cursor: pointer;
-          font-size: 24px; line-height: 1;
-        }
-        .rv-library-list {
-          flex: 1; overflow-y: auto; padding: 8px 0;
-        }
-        .rv-library-item {
-          display: flex; align-items: center; gap: 12px;
-          padding: 10px 16px; width: 100%;
-          background: none; border: none; cursor: pointer;
-          transition: background 0.2s; text-align: left;
-        }
-        .rv-library-item:hover { background: rgba(255,255,255,0.05); }
-        .rv-library-item.active { background: rgba(255,191,0,0.1); }
-        .rv-library-thumb {
-          width: 48px; height: 72px; border-radius: 6px;
-          overflow: hidden; flex-shrink: 0; position: relative;
-        }
-        .rv-library-thumb img {
-          width: 100%; height: 100%; object-fit: cover;
-        }
-        .rv-library-playing {
-          position: absolute; inset: 0;
-          background: rgba(0,0,0,0.5);
-          display: flex; align-items: center; justify-content: center;
-        }
-        .rv-library-info {
-          display: flex; align-items: center; gap: 10px;
-          min-width: 0;
-        }
-        .rv-library-num {
-          font-size: 14px; font-weight: 700;
-          color: rgba(255,255,255,0.4); flex-shrink: 0; width: 20px; text-align: center;
-        }
-        .rv-library-item.active .rv-library-num { color: #FFBF00; }
-        .rv-library-name {
-          font-size: 13px; font-weight: 600; color: #fff; margin: 0;
-          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
-        .rv-library-item.active .rv-library-name { color: #FFBF00; }
-        .rv-library-meta {
-          font-size: 11px; color: rgba(255,255,255,0.5); margin: 2px 0 0 0;
-        }
-
         /* ===== Comments panel ===== */
         .rv-comments {
           position: absolute; bottom: 0;
@@ -608,7 +529,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
         /* ======================================= */
         @media (min-width: 768px) {
           .rv-nav-btn { display: flex; }
-          .rv-dots { display: flex; }
           .rv-actions { right: 16px; gap: 18px; }
           .rv-action-circle { width: 46px; height: 46px; }
           .rv-info { padding: 24px 20px; right: 80px; gap: 8px; }
@@ -622,11 +542,9 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
         @media (min-width: 1024px) {
           .rv-nav-up { left: 32px; }
           .rv-nav-down { left: 32px; }
-          .rv-dots { right: 16px; }
           .rv-info { padding: 28px 24px; }
           .rv-info-title { font-size: 24px; }
           .rv-watch-btn { padding: 12px 24px; font-size: 14px; }
-          .rv-library { width: 340px; }
         }
 
         /* ======================================= */
@@ -652,14 +570,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
         @keyframes reelSlideUp {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideInRight {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
         }
       `}</style>
 
