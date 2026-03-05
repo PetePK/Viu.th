@@ -135,15 +135,24 @@ export default function ReelsSection({ reels, onReelClick }: ReelsSectionProps) 
           padding: 0 var(--gutter);
         }
 
-        /* === Reels Grid — ~60% of width === */
+        /* === Reels Grid — horizontal scroll, single row === */
         .reels-grid {
           flex: 6;
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          display: flex;
           gap: 10px;
           min-width: 0;
+          overflow-x: auto;
+          overflow-y: hidden;
+          scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
         }
-        .reel-card-wrap { cursor: pointer; transition: transform 0.3s ease; }
+        .reels-grid::-webkit-scrollbar { display: none; }
+        .reel-card-wrap {
+          cursor: pointer; transition: transform 0.3s ease;
+          flex: 0 0 130px;
+          scroll-snap-align: start;
+        }
         .reel-card-wrap:hover { transform: scale(1.04); }
         .reel-card {
           position: relative; width: 100%; aspect-ratio: 9/16;
@@ -190,9 +199,10 @@ export default function ReelsSection({ reels, onReelClick }: ReelsSectionProps) 
           align-self: flex-end;
         }
 
-        /* === Tablet (768px+): show ad, 50/50 split === */
+        /* === Tablet (768px+): show ad, bigger cards === */
         @media (min-width: 768px) {
-          .reels-grid { grid-template-columns: repeat(5, 1fr); gap: 14px; }
+          .reels-grid { gap: 14px; }
+          .reel-card-wrap { flex: 0 0 150px; }
           .reels-title { font-size: 22px; }
           .reel-card-name { font-size: 13px; }
           .reel-card-meta { font-size: 11px; }
@@ -203,6 +213,7 @@ export default function ReelsSection({ reels, onReelClick }: ReelsSectionProps) 
         @media (min-width: 1024px) {
           .reels-layout { gap: 32px; }
           .reels-grid { gap: 16px; }
+          .reel-card-wrap { flex: 0 0 160px; }
         }
 
         @keyframes reel-pulse {

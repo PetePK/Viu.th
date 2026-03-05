@@ -12,17 +12,20 @@ interface ReelsViewerProps {
   onWatchFull: (reel: ReelItem) => void;
 }
 
-export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull }: ReelsViewerProps) {
+export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
   const [showComments, setShowComments] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const touchOverlayRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
   const wheelAccum = useRef(0);
   const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastNavTime = useRef(0);
+  const libraryRef = useRef<HTMLDivElement>(null);
 
   const currentReel = reels[currentIndex];
 
@@ -51,29 +54,20 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
     return () => { document.body.style.overflow = 'unset'; };
   }, []);
 
-  // Scroll/wheel navigation — accumulate trackpad deltas, snap one reel at a time
+  // Scroll/wheel navigation on the whole backdrop
   useEffect(() => {
-    const THRESHOLD = 80; // accumulated pixels before triggering nav
-    const COOLDOWN = 500; // ms cooldown after a navigation
+    const THRESHOLD = 80;
+    const COOLDOWN = 500;
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-
       const now = Date.now();
       if (now - lastNavTime.current < COOLDOWN) return;
 
-      // Accumulate delta
       wheelAccum.current += e.deltaY;
-
-      // Clear previous reset timer
       if (wheelTimer.current) clearTimeout(wheelTimer.current);
+      wheelTimer.current = setTimeout(() => { wheelAccum.current = 0; }, 150);
 
-      // Reset accumulator after inactivity (gesture ended)
-      wheelTimer.current = setTimeout(() => {
-        wheelAccum.current = 0;
-      }, 150);
-
-      // Check if accumulated enough to navigate
       if (wheelAccum.current > THRESHOLD) {
         wheelAccum.current = 0;
         lastNavTime.current = now;
@@ -93,7 +87,7 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
     };
   }, [currentIndex, goToReel]);
 
-  // Touch navigation
+  // Touch navigation — attached to the transparent overlay ON TOP of the video
   useEffect(() => {
     let touchStartY = 0;
     const handleTouchStart = (e: TouchEvent) => {
@@ -106,7 +100,9 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
         else goToReel(currentIndex - 1);
       }
     };
-    const el = containerRef.current;
+
+    // Attach to the overlay so it captures touch on top of the iframe
+    const el = touchOverlayRef.current;
     if (el) {
       el.addEventListener('touchstart', handleTouchStart, { passive: true });
       el.addEventListener('touchend', handleTouchEnd, { passive: true });
@@ -119,32 +115,20 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
     };
   }, [currentIndex, goToReel]);
 
-  const [isMuted, setIsMuted] = useState(true);
+  // Auto-scroll library to current reel
+  useEffect(() => {
+    if (showLibrary && libraryRef.current) {
+      const activeItem = libraryRef.current.querySelector(`[data-reel-index="${currentIndex}"]`);
+      if (activeItem) {
+        activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [currentIndex, showLibrary]);
 
   const handleYouTubeReady = useCallback((event: YouTubeEvent) => {
     playerRef.current = event.target;
     event.target.playVideo();
-    // Try to unmute — works on desktop, silently fails on mobile
-    try {
-      event.target.unMute();
-      event.target.setVolume(80);
-      setIsMuted(false);
-    } catch {
-      // Mobile: stays muted, user taps volume button
-    }
   }, []);
-
-  const toggleMute = () => {
-    if (playerRef.current) {
-      if (isMuted) {
-        playerRef.current.unMute();
-        playerRef.current.setVolume(80);
-      } else {
-        playerRef.current.mute();
-      }
-      setIsMuted(!isMuted);
-    }
-  };
 
   const toggleLike = () => {
     setLiked(prev => {
@@ -164,35 +148,33 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
     });
   };
 
+  const handleLibrarySelect = (index: number) => {
+    goToReel(index);
+    setShowLibrary(false);
+  };
+
   const isLiked = liked.has(currentReel.id);
   const isBookmarked = bookmarked.has(currentReel.id);
 
   return (
     <div ref={containerRef} className="rv-backdrop">
-      {/* Top bar: close + volume */}
+      {/* Top bar: close + library */}
       <div className="rv-top-bar">
         <button type="button" onClick={onClose} className="rv-close-btn" aria-label="Close">
           <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <button type="button" onClick={toggleMute} className="rv-mute-btn" aria-label={isMuted ? 'Unmute' : 'Mute'}>
-          {isMuted ? (
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-            </svg>
-          ) : (
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-            </svg>
-          )}
+        <button type="button" onClick={() => setShowLibrary(!showLibrary)} className={`rv-library-btn ${showLibrary ? 'active' : ''}`} aria-label="Show all reels">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          </svg>
         </button>
       </div>
 
-      {/* Main content area — responsive container */}
+      {/* Full-width video area */}
       <div className="rv-main">
-        {/* Navigation arrows */}
+        {/* Navigation arrows (tablet/desktop) */}
         {currentIndex > 0 && (
           <button type="button" onClick={() => goToReel(currentIndex - 1)} className="rv-nav-btn rv-nav-up" aria-label="Previous reel">
             <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,7 +190,7 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
           </button>
         )}
 
-        {/* Progress dots */}
+        {/* Progress dots (tablet/desktop) */}
         <div className="rv-dots">
           {reels.map((_, idx) => (
             <button
@@ -221,7 +203,7 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
           ))}
         </div>
 
-        {/* Video container */}
+        {/* Video container — full width */}
         <div className="rv-video-container">
           {/* YouTube Video */}
           <div key={currentReel.youtubeId} className="rv-video-inner">
@@ -242,10 +224,13 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
                 },
               }}
               onReady={handleYouTubeReady}
-              style={{ position: 'absolute', inset: 0 }}
+              className="rv-yt-wrapper"
               iframeClassName="reels-yt-iframe"
             />
           </div>
+
+          {/* Transparent touch overlay — captures swipe on top of iframe */}
+          <div ref={touchOverlayRef} className="rv-touch-overlay" />
 
           {/* Gradient overlays */}
           <div className="rv-gradient-bottom" />
@@ -253,7 +238,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
 
           {/* Right Side Action Bar */}
           <div className="rv-actions">
-            {/* Like */}
             <button type="button" onClick={toggleLike} className="rv-action-btn">
               <div className={`rv-action-circle ${isLiked ? 'liked' : ''}`}>
                 <svg width="24" height="24" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
@@ -263,7 +247,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
               <span className="rv-action-label">{isLiked ? 'ชอบแล้ว' : 'ชอบ'}</span>
             </button>
 
-            {/* Comment */}
             <button type="button" onClick={() => setShowComments(!showComments)} className="rv-action-btn">
               <div className={`rv-action-circle ${showComments ? 'active' : ''}`}>
                 <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -273,7 +256,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
               <span className="rv-action-label">ความเห็น</span>
             </button>
 
-            {/* Bookmark */}
             <button type="button" onClick={toggleBookmark} className="rv-action-btn">
               <div className={`rv-action-circle ${isBookmarked ? 'bookmarked' : ''}`}>
                 <svg width="22" height="22" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
@@ -283,7 +265,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
               <span className="rv-action-label">{isBookmarked ? 'บันทึกแล้ว' : 'บันทึก'}</span>
             </button>
 
-            {/* Share */}
             <button type="button" className="rv-action-btn">
               <div className="rv-action-circle">
                 <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -296,7 +277,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
 
           {/* Bottom Content Info */}
           <div className="rv-info">
-            {/* Type badge */}
             <div className="rv-info-badges">
               <span className="rv-type-badge">{currentReel.type}</span>
               {currentReel.status && (
@@ -304,15 +284,12 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
               )}
             </div>
 
-            {/* Title */}
             <h2 className="rv-info-title">{currentReel.titleTh || currentReel.title}</h2>
 
-            {/* English title */}
             {currentReel.titleTh && (
               <p className="rv-info-subtitle">{currentReel.title}</p>
             )}
 
-            {/* Meta info */}
             <div className="rv-info-meta">
               <span className="rv-info-year">{currentReel.year}</span>
               <span>•</span>
@@ -326,18 +303,15 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
               </span>
             </div>
 
-            {/* Description */}
             <p className="rv-info-desc">{currentReel.description}</p>
 
-            {/* Genres */}
             <div className="rv-info-genres">
               {currentReel.genres.map((genre, idx) => (
                 <span key={idx} className="rv-genre-tag">{genre}</span>
               ))}
             </div>
 
-            {/* Watch Full CTA */}
-            <a href={getViuUrl(currentReel)} target="_blank" rel="noopener noreferrer" className="rv-watch-btn" style={{ textDecoration: 'none' }}>
+            <a href={getViuUrl(currentReel)} target="_blank" rel="noopener noreferrer" className="rv-watch-btn">
               <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
               </svg>
@@ -347,7 +321,48 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
         </div>
       </div>
 
-      {/* Comments panel (slide-in) */}
+      {/* Library panel — slide-in from right */}
+      {showLibrary && (
+        <div className="rv-library-overlay" onClick={() => setShowLibrary(false)}>
+          <div className="rv-library" ref={libraryRef} onClick={(e) => e.stopPropagation()}>
+            <div className="rv-library-header">
+              <h3>คลิปทั้งหมด</h3>
+              <button type="button" onClick={() => setShowLibrary(false)} className="rv-library-close">×</button>
+            </div>
+            <div className="rv-library-list">
+              {reels.map((reel, idx) => (
+                <button
+                  key={reel.id}
+                  type="button"
+                  data-reel-index={idx}
+                  className={`rv-library-item ${idx === currentIndex ? 'active' : ''}`}
+                  onClick={() => handleLibrarySelect(idx)}
+                >
+                  <div className="rv-library-thumb">
+                    <img src={reel.thumbnail} alt={reel.title} />
+                    {idx === currentIndex && (
+                      <div className="rv-library-playing">
+                        <svg width="16" height="16" fill="#FFBF00" viewBox="0 0 20 20">
+                          <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="rv-library-info">
+                    <span className="rv-library-num">{idx + 1}</span>
+                    <div>
+                      <p className="rv-library-name">{reel.titleTh || reel.title}</p>
+                      <p className="rv-library-meta">{reel.type} • {reel.genres[0]}</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Comments panel */}
       {showComments && (
         <div className="rv-comments">
           <div className="rv-comments-header">
@@ -356,7 +371,7 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
           </div>
           <div className="rv-comments-list">
             {[
-              { user: 'kookiefan_99', text: 'เรื่องนี้สนุกมากกก ดูแล้วดูอีก 💛', time: '2 ชม.' },
+              { user: 'kookiefan_99', text: 'เรื่องนี้สนุกมากกก ดูแล้วดูอีก', time: '2 ชม.' },
               { user: 'dramaqueen_th', text: 'ตัวอย่างทำได้ดีมาก อยากดูแล้ว!', time: '5 ชม.' },
               { user: 'series_addict', text: 'นักแสดงเล่นดีมาก ชอบทุกตัวละคร', time: '1 วัน' },
             ].map((comment, idx) => (
@@ -379,7 +394,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
         </div>
       )}
 
-      {/* All styles via style jsx */}
       <style jsx>{`
         /* ===== Full-screen backdrop ===== */
         .rv-backdrop {
@@ -388,53 +402,43 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
           align-items: center; justify-content: center;
         }
 
-        /* ===== Top bar (close + volume) ===== */
+        /* ===== Top bar ===== */
         .rv-top-bar {
-          position: absolute; top: 16px; left: 16px; right: 16px; z-index: 110;
+          position: absolute; top: 0; left: 0; right: 0; z-index: 110;
           display: flex; align-items: center; justify-content: space-between;
+          padding: 12px 16px;
+          background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
         }
-        .rv-close-btn {
-          width: 44px; height: 44px;
+        .rv-close-btn, .rv-library-btn {
+          width: 40px; height: 40px;
           background: rgba(255,255,255,0.1); backdrop-filter: blur(12px);
           border-radius: 50%; display: flex; align-items: center; justify-content: center;
           border: 1px solid rgba(255,255,255,0.15); cursor: pointer; color: #fff;
           transition: background 0.2s;
         }
-        .rv-close-btn:hover { background: rgba(255,255,255,0.2); }
-        .rv-mute-btn {
-          width: 44px; height: 44px;
-          background: rgba(255,255,255,0.1); backdrop-filter: blur(12px);
-          border-radius: 50%; display: flex; align-items: center; justify-content: center;
-          border: 1px solid rgba(255,255,255,0.15); cursor: pointer; color: #fff;
-          transition: background 0.2s;
-        }
-        .rv-mute-btn:hover { background: rgba(255,255,255,0.2); }
+        .rv-close-btn:hover, .rv-library-btn:hover { background: rgba(255,255,255,0.2); }
+        .rv-library-btn.active { background: rgba(255,191,0,0.25); border-color: rgba(255,191,0,0.4); color: #FFBF00; }
 
-        /* ===== Reel counter ===== */
-        .rv-counter {
-          position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 110;
-          display: flex; align-items: center; gap: 8px;
-          padding: 6px 16px; background: rgba(0,0,0,0.5);
-          backdrop-filter: blur(12px); border-radius: 20px;
-          border: 1px solid rgba(255,255,255,0.1);
-          font-size: 13px; color: #fff; font-weight: 600;
-        }
-
-        /* ===== Main container — holds video + nav ===== */
+        /* ===== Main — FULL WIDTH, FULL HEIGHT ===== */
         .rv-main {
           position: relative;
-          width: 100%; max-width: 420px;
-          height: 100%; max-height: 100vh;
+          width: 100%; height: 100%;
         }
 
-        /* ===== Video container (fills rv-main) ===== */
+        /* ===== Video container — fills entire screen ===== */
         .rv-video-container {
           position: relative; width: 100%; height: 100%;
-          overflow: hidden; border-radius: 0;
+          overflow: hidden;
         }
         .rv-video-inner {
           position: absolute; inset: 0;
           animation: reelFadeIn 0.3s ease-out;
+        }
+
+        /* ===== Transparent touch overlay (captures swipe on video) ===== */
+        .rv-touch-overlay {
+          position: absolute; inset: 0; z-index: 4;
+          /* Transparent, sits above iframe but below UI elements */
         }
 
         /* ===== Gradient overlays ===== */
@@ -451,7 +455,7 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
 
         /* ===== Right-side action bar ===== */
         .rv-actions {
-          position: absolute; right: 8px; bottom: 140px;
+          position: absolute; right: 10px; bottom: 160px;
           display: flex; flex-direction: column; align-items: center; gap: 16px;
           z-index: 10;
         }
@@ -481,8 +485,8 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
         /* ===== Bottom info overlay ===== */
         .rv-info {
           position: absolute; bottom: 0; left: 0; right: 64px;
-          padding: 16px 12px; z-index: 10;
-          display: flex; flex-direction: column; gap: 8px;
+          padding: 16px 14px; z-index: 10;
+          display: flex; flex-direction: column; gap: 6px;
           animation: reelSlideUp 0.4s ease-out;
         }
         .rv-info-badges { display: flex; align-items: center; gap: 8px; }
@@ -523,7 +527,7 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
           padding: 10px 20px; background: #FFBF00; color: #0A0A0A;
           font-size: 13px; font-weight: 700; border-radius: 8px;
           border: none; cursor: pointer; transition: all 0.2s;
-          margin-top: 2px; width: fit-content;
+          margin-top: 2px; width: fit-content; text-decoration: none;
         }
         .rv-watch-btn:hover { background: #FFD700; transform: scale(1.03); }
 
@@ -537,13 +541,13 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
           transition: background 0.2s;
         }
         .rv-nav-btn:hover { background: rgba(255,255,255,0.15); }
-        .rv-nav-up { top: 50%; left: 50%; transform: translate(-50%, -50%) translateX(-260px) translateY(-40px); }
-        .rv-nav-down { top: 50%; left: 50%; transform: translate(-50%, -50%) translateX(-260px) translateY(40px); }
+        .rv-nav-up { top: 50%; left: 24px; transform: translateY(-70%); }
+        .rv-nav-down { top: 50%; left: 24px; transform: translateY(30%); }
 
         /* ===== Progress dots (hidden on mobile) ===== */
         .rv-dots {
           display: none; position: absolute; z-index: 10;
-          top: 50%; right: 0; transform: translateY(-50%) translateX(30px);
+          top: 50%; right: 12px; transform: translateY(-50%);
           flex-direction: column; gap: 6px;
         }
         .rv-dot {
@@ -553,11 +557,76 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
         }
         .rv-dot.active { height: 20px; background: #FFBF00; }
 
+        /* ===== Library panel ===== */
+        .rv-library-overlay {
+          position: absolute; inset: 0; z-index: 130;
+          background: rgba(0,0,0,0.5);
+          animation: fadeIn 0.2s ease-out;
+        }
+        .rv-library {
+          position: absolute; top: 0; right: 0; bottom: 0;
+          width: 300px; max-width: 85vw;
+          background: rgba(20,20,20,0.97); backdrop-filter: blur(20px);
+          border-left: 1px solid rgba(255,255,255,0.08);
+          display: flex; flex-direction: column;
+          animation: slideInRight 0.3s ease-out;
+        }
+        .rv-library-header {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.1);
+          flex-shrink: 0;
+        }
+        .rv-library-header h3 { font-size: 16px; font-weight: 700; color: #fff; margin: 0; }
+        .rv-library-close {
+          background: none; border: none; color: #B3B3B3; cursor: pointer;
+          font-size: 24px; line-height: 1;
+        }
+        .rv-library-list {
+          flex: 1; overflow-y: auto; padding: 8px 0;
+        }
+        .rv-library-item {
+          display: flex; align-items: center; gap: 12px;
+          padding: 10px 16px; width: 100%;
+          background: none; border: none; cursor: pointer;
+          transition: background 0.2s; text-align: left;
+        }
+        .rv-library-item:hover { background: rgba(255,255,255,0.05); }
+        .rv-library-item.active { background: rgba(255,191,0,0.1); }
+        .rv-library-thumb {
+          width: 48px; height: 72px; border-radius: 6px;
+          overflow: hidden; flex-shrink: 0; position: relative;
+        }
+        .rv-library-thumb img {
+          width: 100%; height: 100%; object-fit: cover;
+        }
+        .rv-library-playing {
+          position: absolute; inset: 0;
+          background: rgba(0,0,0,0.5);
+          display: flex; align-items: center; justify-content: center;
+        }
+        .rv-library-info {
+          display: flex; align-items: center; gap: 10px;
+          min-width: 0;
+        }
+        .rv-library-num {
+          font-size: 14px; font-weight: 700;
+          color: rgba(255,255,255,0.4); flex-shrink: 0; width: 20px; text-align: center;
+        }
+        .rv-library-item.active .rv-library-num { color: #FFBF00; }
+        .rv-library-name {
+          font-size: 13px; font-weight: 600; color: #fff; margin: 0;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .rv-library-item.active .rv-library-name { color: #FFBF00; }
+        .rv-library-meta {
+          font-size: 11px; color: rgba(255,255,255,0.5); margin: 2px 0 0 0;
+        }
+
         /* ===== Comments panel ===== */
         .rv-comments {
           position: absolute; bottom: 0;
-          left: 50%; transform: translateX(-50%);
-          width: 100%; max-width: 420px; height: 50vh;
+          left: 0; right: 0;
+          height: 50vh;
           background: rgba(26,26,26,0.95); backdrop-filter: blur(20px);
           border-radius: 16px 16px 0 0; z-index: 120;
           animation: reelSlideUp 0.3s ease-out;
@@ -604,61 +673,46 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
         }
 
         /* ======================================= */
-        /* TABLET PORTRAIT (768px+) — phone-style  */
+        /* TABLET (768px+)                         */
         /* ======================================= */
         @media (min-width: 768px) {
-          .rv-main { max-width: 420px; }
-          .rv-video-container { border-radius: 16px; }
           .rv-nav-btn { display: flex; }
           .rv-dots { display: flex; }
-          .rv-actions { right: 10px; gap: 18px; }
+          .rv-actions { right: 16px; gap: 18px; }
           .rv-action-circle { width: 46px; height: 46px; }
-          .rv-info { padding: 20px 16px; right: 70px; }
-          .rv-info-title { font-size: 20px; }
-          .rv-info-desc { font-size: 13px; }
-          .rv-comments { max-width: 420px; }
-        }
-
-        /* ============================================= */
-        /* LANDSCAPE / WIDE (min-width: 1024px)          */
-        /* Wider video, side-by-side info on large screens */
-        /* ============================================= */
-        @media (min-width: 1024px) {
-          .rv-main { max-width: 480px; }
-          .rv-nav-up { transform: translate(-50%, -50%) translateX(-300px) translateY(-40px); }
-          .rv-nav-down { transform: translate(-50%, -50%) translateX(-300px) translateY(40px); }
-          .rv-dots { transform: translateY(-50%) translateX(40px); }
+          .rv-info { padding: 24px 20px; right: 80px; gap: 8px; }
           .rv-info-title { font-size: 22px; }
-          .rv-watch-btn { padding: 12px 24px; font-size: 14px; }
+          .rv-info-desc { font-size: 13px; }
         }
 
         /* ======================================= */
-        /* LANDSCAPE on iPad specifically           */
-        /* (height ≤ 900px AND width ≥ 1024)       */
-        /* Use more horizontal space                */
+        /* DESKTOP (1024px+)                       */
+        /* ======================================= */
+        @media (min-width: 1024px) {
+          .rv-nav-up { left: 32px; }
+          .rv-nav-down { left: 32px; }
+          .rv-dots { right: 16px; }
+          .rv-info { padding: 28px 24px; }
+          .rv-info-title { font-size: 24px; }
+          .rv-watch-btn { padding: 12px 24px; font-size: 14px; }
+          .rv-library { width: 340px; }
+        }
+
+        /* ======================================= */
+        /* LANDSCAPE iPad (1024px+, height ≤ 900)  */
         /* ======================================= */
         @media (min-width: 1024px) and (max-height: 900px) {
-          .rv-main { max-width: 380px; }
-          .rv-info { gap: 6px; padding: 12px 12px; }
-          .rv-info-title { font-size: 18px; }
+          .rv-info { gap: 4px; padding: 16px 20px; }
+          .rv-info-title { font-size: 20px; }
           .rv-info-desc { -webkit-line-clamp: 1; }
           .rv-info-genres { display: none; }
           .rv-watch-btn { padding: 8px 18px; font-size: 13px; }
           .rv-action-circle { width: 40px; height: 40px; }
-          .rv-actions { gap: 14px; bottom: 120px; }
+          .rv-actions { gap: 14px; bottom: 140px; }
         }
 
         /* ======================================= */
-        /* LARGE DESKTOP (1280px+)                  */
-        /* ======================================= */
-        @media (min-width: 1280px) {
-          .rv-main { max-width: 520px; }
-          .rv-nav-up { transform: translate(-50%, -50%) translateX(-330px) translateY(-40px); }
-          .rv-nav-down { transform: translate(-50%, -50%) translateX(-330px) translateY(40px); }
-        }
-
-        /* ======================================= */
-        /* ANIMATIONS                               */
+        /* ANIMATIONS                              */
         /* ======================================= */
         @keyframes reelFadeIn {
           from { opacity: 0; transform: scale(1.02); }
@@ -668,10 +722,21 @@ export default function ReelsViewer({ reels, initialIndex, onClose, onWatchFull 
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes slideInRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
       `}</style>
 
-      {/* Global style for YouTube iframe */}
       <style jsx global>{`
+        .rv-yt-wrapper {
+          position: absolute; inset: 0;
+          width: 100%; height: 100%;
+        }
         .reels-yt-iframe {
           position: absolute;
           top: 50%; left: 50%;
