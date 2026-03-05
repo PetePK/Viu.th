@@ -23,6 +23,7 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
   const wheelAccum = useRef(0);
   const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastNavTime = useRef(0);
+  const wheelLocked = useRef(false);
 
   const currentReel = reels[currentIndex];
 
@@ -78,44 +79,51 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
     return () => { document.body.style.overflow = 'unset'; };
   }, []);
 
-  // Scroll/wheel navigation — strictly one reel per gesture
+  // Scroll/wheel navigation — strictly one reel per gesture using ref-based lock
   useEffect(() => {
     const THRESHOLD = 60;
-    const COOLDOWN = 800; // longer cooldown to prevent multi-skip
-    let navigatedThisGesture = false;
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const now = Date.now();
 
-      // Hard cooldown after any navigation
-      if (now - lastNavTime.current < COOLDOWN) {
-        wheelAccum.current = 0;
+      // Locked after a navigation — ignore ALL wheel events until gesture ends
+      if (wheelLocked.current) {
+        // Keep resetting the unlock timer while scrolling continues
+        if (wheelTimer.current) clearTimeout(wheelTimer.current);
+        wheelTimer.current = setTimeout(() => {
+          wheelLocked.current = false;
+          wheelAccum.current = 0;
+        }, 300);
         return;
       }
 
-      // Already navigated in this scroll gesture — block until gesture ends
-      if (navigatedThisGesture) return;
-
       wheelAccum.current += e.deltaY;
 
-      // Reset gesture tracking after inactivity
+      // Reset accumulator if gesture pauses
       if (wheelTimer.current) clearTimeout(wheelTimer.current);
       wheelTimer.current = setTimeout(() => {
         wheelAccum.current = 0;
-        navigatedThisGesture = false;
-      }, 200);
+      }, 150);
 
       if (wheelAccum.current > THRESHOLD) {
         wheelAccum.current = 0;
-        lastNavTime.current = now;
-        navigatedThisGesture = true;
+        wheelLocked.current = true;
         goToReel(currentIndex + 1);
+        // Unlock after gesture ends (300ms of no wheel events)
+        if (wheelTimer.current) clearTimeout(wheelTimer.current);
+        wheelTimer.current = setTimeout(() => {
+          wheelLocked.current = false;
+          wheelAccum.current = 0;
+        }, 300);
       } else if (wheelAccum.current < -THRESHOLD) {
         wheelAccum.current = 0;
-        lastNavTime.current = now;
-        navigatedThisGesture = true;
+        wheelLocked.current = true;
         goToReel(currentIndex - 1);
+        if (wheelTimer.current) clearTimeout(wheelTimer.current);
+        wheelTimer.current = setTimeout(() => {
+          wheelLocked.current = false;
+          wheelAccum.current = 0;
+        }, 300);
       }
     };
 
@@ -123,7 +131,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
     if (el) el.addEventListener('wheel', handleWheel, { passive: false });
     return () => {
       if (el) el.removeEventListener('wheel', handleWheel);
-      if (wheelTimer.current) clearTimeout(wheelTimer.current);
     };
   }, [currentIndex, goToReel]);
 
