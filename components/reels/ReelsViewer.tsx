@@ -17,7 +17,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [bookmarked, setBookmarked] = useState<Set<string>>(new Set());
   const [showComments, setShowComments] = useState(false);
-  const [showLibrary, setShowLibrary] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const touchOverlayRef = useRef<HTMLDivElement>(null);
@@ -25,7 +24,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
   const wheelAccum = useRef(0);
   const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastNavTime = useRef(0);
-  const libraryRef = useRef<HTMLDivElement>(null);
 
   const currentReel = reels[currentIndex];
 
@@ -115,19 +113,16 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
     };
   }, [currentIndex, goToReel]);
 
-  // Auto-scroll library to current reel
-  useEffect(() => {
-    if (showLibrary && libraryRef.current) {
-      const activeItem = libraryRef.current.querySelector(`[data-reel-index="${currentIndex}"]`);
-      if (activeItem) {
-        activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    }
-  }, [currentIndex, showLibrary]);
-
   const handleYouTubeReady = useCallback((event: YouTubeEvent) => {
     playerRef.current = event.target;
     event.target.playVideo();
+    // Auto-unmute — works on desktop, silently fails on mobile (browser policy)
+    try {
+      event.target.unMute();
+      event.target.setVolume(80);
+    } catch {
+      // Mobile stays muted until user interaction
+    }
   }, []);
 
   const toggleLike = () => {
@@ -148,11 +143,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
     });
   };
 
-  const handleLibrarySelect = (index: number) => {
-    goToReel(index);
-    setShowLibrary(false);
-  };
-
   const isLiked = liked.has(currentReel.id);
   const isBookmarked = bookmarked.has(currentReel.id);
 
@@ -163,11 +153,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
         <button type="button" onClick={onClose} className="rv-close-btn" aria-label="Close">
           <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        <button type="button" onClick={() => setShowLibrary(!showLibrary)} className={`rv-library-btn ${showLibrary ? 'active' : ''}`} aria-label="Show all reels">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
           </svg>
         </button>
       </div>
@@ -189,19 +174,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
             </svg>
           </button>
         )}
-
-        {/* Progress dots (tablet/desktop) */}
-        <div className="rv-dots">
-          {reels.map((_, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => goToReel(idx)}
-              className={`rv-dot ${idx === currentIndex ? 'active' : ''}`}
-              aria-label={`Go to reel ${idx + 1}`}
-            />
-          ))}
-        </div>
 
         {/* Video container — full width */}
         <div className="rv-video-container">
@@ -320,47 +292,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
           </div>
         </div>
       </div>
-
-      {/* Library panel — slide-in from right */}
-      {showLibrary && (
-        <div className="rv-library-overlay" onClick={() => setShowLibrary(false)}>
-          <div className="rv-library" ref={libraryRef} onClick={(e) => e.stopPropagation()}>
-            <div className="rv-library-header">
-              <h3>คลิปทั้งหมด</h3>
-              <button type="button" onClick={() => setShowLibrary(false)} className="rv-library-close">×</button>
-            </div>
-            <div className="rv-library-list">
-              {reels.map((reel, idx) => (
-                <button
-                  key={reel.id}
-                  type="button"
-                  data-reel-index={idx}
-                  className={`rv-library-item ${idx === currentIndex ? 'active' : ''}`}
-                  onClick={() => handleLibrarySelect(idx)}
-                >
-                  <div className="rv-library-thumb">
-                    <img src={reel.thumbnail} alt={reel.title} />
-                    {idx === currentIndex && (
-                      <div className="rv-library-playing">
-                        <svg width="16" height="16" fill="#FFBF00" viewBox="0 0 20 20">
-                          <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className="rv-library-info">
-                    <span className="rv-library-num">{idx + 1}</span>
-                    <div>
-                      <p className="rv-library-name">{reel.titleTh || reel.title}</p>
-                      <p className="rv-library-meta">{reel.type} • {reel.genres[0]}</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Comments panel */}
       {showComments && (

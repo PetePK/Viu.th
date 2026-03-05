@@ -28,6 +28,7 @@ export interface Content {
   longDescription?: string;
   contentRating?: string;
   tags?: string[];
+  viuUrl?: string;
 }
 
 export interface Category {
