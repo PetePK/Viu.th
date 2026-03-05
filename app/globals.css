@@ -363,33 +363,22 @@ p {
   width: 100%;
 }
 
-/* === TOP 10 RESPONSIVE GRID — fixed-size cards, only column count changes === */
+/* === TOP 10 RESPONSIVE GRID — equal-width cards that fill available space === */
 .top10-grid {
   display: grid;
-  grid-template-columns: repeat(2, 140px);
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 }
 @media (min-width: 480px) {
   .top10-grid {
-    grid-template-columns: repeat(3, 140px);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
   }
 }
 @media (min-width: 768px) {
   .top10-grid {
-    grid-template-columns: repeat(5, 120px);
-    gap: 14px;
-  }
-}
-@media (min-width: 1024px) {
-  .top10-grid {
-    grid-template-columns: repeat(5, 140px);
+    grid-template-columns: repeat(5, 1fr);
     gap: 16px;
-  }
-}
-@media (min-width: 1280px) {
-  .top10-grid {
-    grid-template-columns: repeat(5, 160px);
-    gap: 18px;
   }
 }
 

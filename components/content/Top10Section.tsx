@@ -191,11 +191,11 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
           transition: all 0.3s ease;
         }
 
-        /* Thumbnail — square */
+        /* Thumbnail — 16:9 to match other content cards */
         .top10-thumb {
           position: relative;
           width: 100%;
-          aspect-ratio: 1 / 1;
+          aspect-ratio: 16 / 9;
           border-radius: 10px;
           overflow: hidden;
           background-color: #2A2A2A;
