@@ -1,10 +1,14 @@
 /**
  * Constructs a real Viu Thailand URL for watching content.
  *
- * Extracts the Viu product ID from CDN thumbnail URLs when available,
- * otherwise falls back to a Viu search URL.
+ * Priority: explicit viuUrl > product ID from CDN thumbnail > search fallback.
  */
-export function getViuUrl(item: { title: string; thumbnail?: string }): string {
+export function getViuUrl(item: { title: string; thumbnail?: string; viuUrl?: string }): string {
+  // Use explicit Viu URL if provided
+  if (item.viuUrl) {
+    return item.viuUrl;
+  }
+
   // Extract Viu product ID from CDN thumbnail URL
   // Pattern: https://prod-images.viu.com/{productId}/...
   const match = item.thumbnail?.match(/prod-images\.viu\.com\/(\d+)\//);

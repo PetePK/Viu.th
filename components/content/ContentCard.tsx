@@ -9,9 +9,10 @@ interface ContentCardProps {
   onCardClick: (content: Content) => void;
   rank?: number;
   index?: number;
+  fullWidth?: boolean;
 }
 
-export default function ContentCard({ content, onCardClick, rank }: ContentCardProps) {
+export default function ContentCard({ content, onCardClick, rank, fullWidth }: ContentCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
@@ -55,7 +56,7 @@ export default function ContentCard({ content, onCardClick, rank }: ContentCardP
       style={{
         position: 'relative',
         flexShrink: '0',
-        width: 'clamp(220px, 19vw, 264px)',
+        width: fullWidth ? '100%' : 'clamp(220px, 19vw, 264px)',
         cursor: 'pointer'
       }}
       onMouseEnter={handleMouseEnter}

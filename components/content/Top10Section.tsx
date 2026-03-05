@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import ContentCard from './ContentCard';
 import { Content } from '@/types';
 
 interface Top10SectionProps {
@@ -9,92 +9,31 @@ interface Top10SectionProps {
 }
 
 export default function Top10Section({ content, onContentClick }: Top10SectionProps) {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-
-  const handleCardClick = (item: Content) => {
-    setHoveredIndex(null);
-    onContentClick(item);
-  };
-
   return (
     <section className="top10-section">
-      {/* 80/20 layout: Left = Top10, Right = Ads */}
       <div className="top10-layout">
-        {/* Left Column ~80%: Title + Grid */}
+        {/* Left: Title + Grid */}
         <div className="top10-main">
-          {/* Section Title */}
           <div className="top10-header">
             <h2 className="top10-heading">Top 10 เดือนนี้</h2>
             <span className="top10-hot-badge">HOT</span>
           </div>
 
-          {/* Cards Grid */}
           <div className="top10-grid">
             {content.slice(0, 10).map((item, index) => (
-              <div
+              <ContentCard
                 key={item.id}
-                className="top10-card"
-                onClick={() => handleCardClick(item)}
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseLeave={() => setHoveredIndex(null)}
-                style={{
-                  transform: hoveredIndex === index ? 'scale(1.05)' : 'scale(1)',
-                  zIndex: hoveredIndex === index ? 30 : 10,
-                }}
-              >
-                {/* Thumbnail — square */}
-                <div className="top10-thumb">
-                  {item.thumbnail ? (
-                    <img
-                      src={item.thumbnail}
-                      alt={item.title}
-                      className="top10-thumb-img"
-                    />
-                  ) : (
-                    <div className="top10-thumb-placeholder">
-                      <svg style={{ width: '40px', height: '40px', opacity: '0.2' }} fill="none" stroke="#FFFFFF" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  )}
-
-                  {/* Rank Number */}
-                  <div className="top10-rank" style={{
-                    color: index < 3 ? '#FFCC00' : 'rgba(255,255,255,0.7)',
-                  }}>
-                    {index + 1}
-                  </div>
-
-                  {/* Bottom gradient */}
-                  <div className="top10-gradient" />
-
-                  {/* Hover overlay */}
-                  {hoveredIndex === index && (
-                    <div className="top10-hover-overlay">
-                      <div className="top10-play-circle">
-                        <svg style={{ width: '24px', height: '24px', color: '#000', marginLeft: '3px' }} fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                        </svg>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Title & genre — fixed height */}
-                <div className="top10-info">
-                  <h3 className="top10-title">{item.title}</h3>
-                  <div className="top10-genre">
-                    {item.genres?.slice(0, 2).join(' • ') || item.type}
-                  </div>
-                </div>
-              </div>
+                content={item}
+                onCardClick={onContentClick}
+                rank={index + 1}
+                fullWidth
+              />
             ))}
           </div>
         </div>
 
-        {/* Right Column ~20%: Ads */}
+        {/* Right: Ads */}
         <div className="top10-ads">
-          {/* Viu Premium Upgrade */}
           <div className="top10-ad-card top10-premium">
             <div className="top10-premium-glow" />
             <div className="top10-premium-label">Viu Premium</div>
@@ -107,13 +46,11 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
             </button>
           </div>
 
-          {/* iPhone Ad */}
           <div className="top10-ad-card top10-ad-poster">
             <img src="/images/ads/iphone.jpg" alt="iPhone 15 Pro" />
             <div className="top10-ad-badge">AD</div>
           </div>
 
-          {/* Dr.Pong Ad */}
           <div className="top10-ad-card top10-ad-poster">
             <img src="/images/ads/dr-pong.webp" alt="Dr.PONG" />
             <div className="top10-ad-badge">AD</div>
@@ -126,7 +63,6 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
           margin-bottom: 48px;
         }
 
-        /* === 80/20 Layout === */
         .top10-layout {
           display: flex;
           flex-direction: column;
@@ -145,17 +81,58 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
           gap: 14px;
         }
 
-        @media (min-width: 768px) {
+        @media (min-width: 1024px) {
           .top10-layout {
             flex-direction: row;
             gap: 24px;
           }
           .top10-main {
-            flex: 4;
+            flex: 58;
+            min-width: 0;
           }
           .top10-ads {
-            flex: 1;
+            flex: 42;
             min-width: 0;
+          }
+        }
+
+        /* === Grid === */
+        .top10-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+
+        @media (min-width: 576px) {
+          .top10-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+          }
+        }
+        
+        @media (min-width: 768px) {
+          .top10-grid {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
+
+        @media (min-width: 1024px) {
+          /* When side-by-side (58/42 split), 58% width is smaller, so reduce columns back to 2 */
+          .top10-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+          }
+        }
+
+        @media (min-width: 1280px) {
+          .top10-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+
+        @media (min-width: 1536px) {
+          .top10-grid {
+            grid-template-columns: repeat(4, 1fr);
           }
         }
 
@@ -182,113 +159,6 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
           font-weight: 700;
           color: #000;
           letter-spacing: 0.5px;
-        }
-
-        /* === Card === */
-        .top10-card {
-          position: relative;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        /* Thumbnail — 16:9 to match other content cards */
-        .top10-thumb {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 16 / 9;
-          border-radius: 10px;
-          overflow: hidden;
-          background-color: #2A2A2A;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-        .top10-card:hover .top10-thumb {
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
-        }
-
-        .top10-thumb-img {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-        }
-
-        .top10-thumb-placeholder {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        /* Rank number */
-        .top10-rank {
-          position: absolute;
-          bottom: -4px;
-          right: 6px;
-          font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
-          font-size: 3.2em;
-          line-height: 0.8;
-          text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-          font-weight: 900;
-          pointer-events: none;
-          z-index: 5;
-        }
-
-        .top10-gradient {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 50%;
-          background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
-          pointer-events: none;
-        }
-
-        .top10-hover-overlay {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(0,0,0,0.3);
-        }
-
-        .top10-play-circle {
-          width: 48px;
-          height: 48px;
-          background-color: rgba(255, 191, 0, 0.9);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        /* Title area — fixed height */
-        .top10-info {
-          padding: 6px 2px 0;
-          height: 44px;
-          overflow: hidden;
-        }
-
-        .top10-title {
-          color: #FFFFFF;
-          font-size: 12px;
-          font-weight: 700;
-          margin: 0 0 2px 0;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          line-height: 1.3;
-        }
-
-        .top10-genre {
-          font-size: 10px;
-          color: #888;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
         }
 
         /* === Ads column === */
@@ -377,16 +247,16 @@ export default function Top10Section({ content, onContentClick }: Top10SectionPr
           border-radius: 3px;
         }
 
-        /* Mobile: hide ads, show below on small screens */
-        @media (max-width: 767px) {
+        @media (max-width: 1023px) {
           .top10-ads {
             flex-direction: row;
             overflow-x: auto;
             scrollbar-width: none;
+            gap: 16px;
           }
           .top10-ads::-webkit-scrollbar { display: none; }
           .top10-ad-card {
-            flex: 0 0 70%;
+            flex: 0 0 clamp(260px, 60%, 320px);
           }
         }
       `}</style>
