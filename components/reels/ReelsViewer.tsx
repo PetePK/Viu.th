@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import YouTube, { YouTubeEvent } from 'react-youtube';
 import { ReelItem } from '@/data/reelsData';
 import { getViuUrl } from '@/lib/viuUrl';
 
@@ -20,13 +19,39 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
   const [isTransitioning, setIsTransitioning] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const touchOverlayRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<any>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const wheelAccum = useRef(0);
   const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastNavTime = useRef(0);
-  const hasInteracted = useRef(false);
 
   const currentReel = reels[currentIndex];
+
+  // Build YouTube embed URL with all autoplay params baked in
+  const getEmbedUrl = (youtubeId: string) => {
+    const params = new URLSearchParams({
+      autoplay: '1',
+      mute: '1',
+      playsinline: '1',
+      controls: '0',
+      rel: '0',
+      modestbranding: '1',
+      showinfo: '0',
+      fs: '0',
+      enablejsapi: '1',
+      origin: typeof window !== 'undefined' ? window.location.origin : '',
+    });
+    return `https://www.youtube.com/embed/${youtubeId}?${params.toString()}`;
+  };
+
+  // Send command to YouTube iframe via postMessage
+  const sendCommand = useCallback((func: string) => {
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func }),
+        '*'
+      );
+    }
+  }, []);
 
   const goToReel = useCallback((newIndex: number) => {
     if (newIndex < 0 || newIndex >= reels.length || isTransitioning) return;
@@ -53,27 +78,43 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
     return () => { document.body.style.overflow = 'unset'; };
   }, []);
 
-  // Scroll/wheel navigation on the whole backdrop
+  // Scroll/wheel navigation — strictly one reel per gesture
   useEffect(() => {
-    const THRESHOLD = 80;
-    const COOLDOWN = 500;
+    const THRESHOLD = 60;
+    const COOLDOWN = 800; // longer cooldown to prevent multi-skip
+    let navigatedThisGesture = false;
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       const now = Date.now();
-      if (now - lastNavTime.current < COOLDOWN) return;
+
+      // Hard cooldown after any navigation
+      if (now - lastNavTime.current < COOLDOWN) {
+        wheelAccum.current = 0;
+        return;
+      }
+
+      // Already navigated in this scroll gesture — block until gesture ends
+      if (navigatedThisGesture) return;
 
       wheelAccum.current += e.deltaY;
+
+      // Reset gesture tracking after inactivity
       if (wheelTimer.current) clearTimeout(wheelTimer.current);
-      wheelTimer.current = setTimeout(() => { wheelAccum.current = 0; }, 150);
+      wheelTimer.current = setTimeout(() => {
+        wheelAccum.current = 0;
+        navigatedThisGesture = false;
+      }, 200);
 
       if (wheelAccum.current > THRESHOLD) {
         wheelAccum.current = 0;
         lastNavTime.current = now;
+        navigatedThisGesture = true;
         goToReel(currentIndex + 1);
       } else if (wheelAccum.current < -THRESHOLD) {
         wheelAccum.current = 0;
         lastNavTime.current = now;
+        navigatedThisGesture = true;
         goToReel(currentIndex - 1);
       }
     };
@@ -86,23 +127,11 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
     };
   }, [currentIndex, goToReel]);
 
-  // Touch navigation — attached to the transparent overlay ON TOP of the video
+  // Touch navigation on overlay
   useEffect(() => {
     let touchStartY = 0;
     const handleTouchStart = (e: TouchEvent) => {
       touchStartY = e.touches[0].clientY;
-
-      // First touch: mark as interacted and unmute current video
-      if (!hasInteracted.current) {
-        hasInteracted.current = true;
-        if (playerRef.current) {
-          try {
-            playerRef.current.unMute();
-            playerRef.current.setVolume(80);
-            playerRef.current.playVideo();
-          } catch { /* ignore */ }
-        }
-      }
     };
     const handleTouchEnd = (e: TouchEvent) => {
       const diff = touchStartY - e.changedTouches[0].clientY;
@@ -112,7 +141,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
       }
     };
 
-    // Attach to the overlay so it captures touch on top of the iframe
     const el = touchOverlayRef.current;
     if (el) {
       el.addEventListener('touchstart', handleTouchStart, { passive: true });
@@ -126,37 +154,18 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
     };
   }, [currentIndex, goToReel]);
 
-  const handleYouTubeReady = useCallback((event: YouTubeEvent) => {
-    playerRef.current = event.target;
-    event.target.playVideo();
+  const [isPlaying, setIsPlaying] = useState(true);
 
-    // If user has already interacted (swiped/tapped), unmute immediately
-    // Otherwise stays muted — mobile browser policy requires gesture first
-    if (hasInteracted.current) {
-      try {
-        event.target.unMute();
-        event.target.setVolume(80);
-      } catch { /* ignore */ }
+  const handleOverlayClick = () => {
+    if (isPlaying) {
+      sendCommand('pauseVideo');
+      setIsPlaying(false);
     } else {
-      // Desktop: try to unmute (works if browser allows)
-      try {
-        event.target.unMute();
-        event.target.setVolume(80);
-      } catch { /* stays muted */ }
+      sendCommand('playVideo');
+      sendCommand('unMute');
+      setIsPlaying(true);
     }
-  }, []);
-
-  // If autoplay fails (mobile), retry playback on state change
-  const handleStateChange = useCallback((event: YouTubeEvent) => {
-    // YouTube states: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering, 5=cued
-    const state = event.data;
-    if (state === -1 && hasInteracted.current) {
-      // Video unstarted but user has interacted — force play
-      try {
-        event.target.playVideo();
-      } catch { /* ignore */ }
-    }
-  }, []);
+  };
 
   const toggleLike = () => {
     setLiked(prev => {
@@ -181,7 +190,7 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
 
   return (
     <div ref={containerRef} className="rv-backdrop">
-      {/* Top bar: close + library */}
+      {/* Top bar */}
       <div className="rv-top-bar">
         <button type="button" onClick={onClose} className="rv-close-btn" aria-label="Close">
           <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,52 +217,22 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
           </button>
         )}
 
-        {/* Video container — full width */}
+        {/* Video container */}
         <div className="rv-video-container">
-          {/* YouTube Video */}
+          {/* Raw YouTube iframe — autoplay params in URL + allow attribute */}
           <div key={currentReel.youtubeId} className="rv-video-inner">
-            <YouTube
-              videoId={currentReel.youtubeId}
-              opts={{
-                width: '100%',
-                height: '100%',
-                playerVars: {
-                  autoplay: 1,
-                  mute: 1,
-                  rel: 0,
-                  modestbranding: 1,
-                  playsinline: 1,
-                  controls: 0,
-                  showinfo: 0,
-                  fs: 0,
-                },
-              }}
-              onReady={handleYouTubeReady}
-              onStateChange={handleStateChange}
-              className="rv-yt-wrapper"
-              iframeClassName="reels-yt-iframe"
+            <iframe
+              ref={iframeRef}
+              src={getEmbedUrl(currentReel.youtubeId)}
+              className="rv-iframe"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title={currentReel.title}
             />
           </div>
 
-          {/* Transparent touch overlay — captures swipe/tap on top of iframe */}
-          <div ref={touchOverlayRef} className="rv-touch-overlay" onClick={() => {
-            if (!hasInteracted.current) {
-              hasInteracted.current = true;
-            }
-            // Toggle play/pause on tap (like TikTok)
-            if (playerRef.current) {
-              try {
-                const state = playerRef.current.getPlayerState();
-                if (state === 1) {
-                  playerRef.current.pauseVideo();
-                } else {
-                  playerRef.current.playVideo();
-                  playerRef.current.unMute();
-                  playerRef.current.setVolume(80);
-                }
-              } catch { /* ignore */ }
-            }
-          }} />
+          {/* Touch overlay for swipe/tap */}
+          <div ref={touchOverlayRef} className="rv-touch-overlay" onClick={handleOverlayClick} />
 
           {/* Gradient overlays */}
           <div className="rv-gradient-bottom" />
@@ -377,14 +356,12 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
       )}
 
       <style jsx>{`
-        /* ===== Full-screen backdrop ===== */
         .rv-backdrop {
           position: fixed; inset: 0; z-index: 100;
           background: #000; display: flex;
           align-items: center; justify-content: center;
         }
 
-        /* ===== Top bar ===== */
         .rv-top-bar {
           position: absolute; top: 0; left: 0; right: 0; z-index: 110;
           display: flex; align-items: center; justify-content: space-between;
@@ -400,13 +377,11 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
         }
         .rv-close-btn:hover { background: rgba(255,255,255,0.2); }
 
-        /* ===== Main — FULL WIDTH, FULL HEIGHT ===== */
         .rv-main {
           position: relative;
           width: 100%; height: 100%;
         }
 
-        /* ===== Video container — fills entire screen ===== */
         .rv-video-container {
           position: relative; width: 100%; height: 100%;
           overflow: hidden;
@@ -415,14 +390,19 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
           position: absolute; inset: 0;
           animation: reelFadeIn 0.3s ease-out;
         }
-
-        /* ===== Transparent touch overlay (captures swipe on video) ===== */
-        .rv-touch-overlay {
-          position: absolute; inset: 0; z-index: 4;
-          /* Transparent, sits above iframe but below UI elements */
+        .rv-iframe {
+          position: absolute;
+          top: 50%; left: 50%;
+          width: 100%; height: 100%;
+          min-width: 100%; min-height: 100%;
+          transform: translate(-50%, -50%);
+          border: none;
         }
 
-        /* ===== Gradient overlays ===== */
+        .rv-touch-overlay {
+          position: absolute; inset: 0; z-index: 4;
+        }
+
         .rv-gradient-bottom {
           position: absolute; bottom: 0; left: 0; right: 0; height: 50%;
           background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
@@ -434,7 +414,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
           pointer-events: none; z-index: 5;
         }
 
-        /* ===== Right-side action bar ===== */
         .rv-actions {
           position: absolute; right: 10px; bottom: 160px;
           display: flex; flex-direction: column; align-items: center; gap: 16px;
@@ -463,7 +442,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
         }
         .rv-action-label { font-size: 10px; color: #fff; font-weight: 600; }
 
-        /* ===== Bottom info overlay ===== */
         .rv-info {
           position: absolute; bottom: 0; left: 0; right: 64px;
           padding: 16px 14px; z-index: 10;
@@ -512,7 +490,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
         }
         .rv-watch-btn:hover { background: #FFD700; transform: scale(1.03); }
 
-        /* ===== Navigation arrows (hidden on mobile) ===== */
         .rv-nav-btn {
           display: none; position: absolute; z-index: 10;
           width: 44px; height: 44px;
@@ -525,7 +502,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
         .rv-nav-up { top: 50%; left: 24px; transform: translateY(-70%); }
         .rv-nav-down { top: 50%; left: 24px; transform: translateY(30%); }
 
-        /* ===== Comments panel ===== */
         .rv-comments {
           position: absolute; bottom: 0;
           left: 0; right: 0;
@@ -575,9 +551,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
           font-weight: 700; cursor: pointer;
         }
 
-        /* ======================================= */
-        /* TABLET (768px+)                         */
-        /* ======================================= */
         @media (min-width: 768px) {
           .rv-nav-btn { display: flex; }
           .rv-actions { right: 16px; gap: 18px; }
@@ -587,9 +560,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
           .rv-info-desc { font-size: 13px; }
         }
 
-        /* ======================================= */
-        /* DESKTOP (1024px+)                       */
-        /* ======================================= */
         @media (min-width: 1024px) {
           .rv-nav-up { left: 32px; }
           .rv-nav-down { left: 32px; }
@@ -598,9 +568,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
           .rv-watch-btn { padding: 12px 24px; font-size: 14px; }
         }
 
-        /* ======================================= */
-        /* LANDSCAPE iPad (1024px+, height ≤ 900)  */
-        /* ======================================= */
         @media (min-width: 1024px) and (max-height: 900px) {
           .rv-info { gap: 4px; padding: 16px 20px; }
           .rv-info-title { font-size: 20px; }
@@ -611,9 +578,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
           .rv-actions { gap: 14px; bottom: 140px; }
         }
 
-        /* ======================================= */
-        /* ANIMATIONS                              */
-        /* ======================================= */
         @keyframes reelFadeIn {
           from { opacity: 0; transform: scale(1.02); }
           to { opacity: 1; transform: scale(1); }
@@ -621,21 +585,6 @@ export default function ReelsViewer({ reels, initialIndex, onClose }: ReelsViewe
         @keyframes reelSlideUp {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-
-      <style jsx global>{`
-        .rv-yt-wrapper {
-          position: absolute; inset: 0;
-          width: 100%; height: 100%;
-        }
-        .reels-yt-iframe {
-          position: absolute;
-          top: 50%; left: 50%;
-          width: 100%; height: 100%;
-          min-width: 100%; min-height: 100%;
-          transform: translate(-50%, -50%);
-          border: none; object-fit: cover;
         }
       `}</style>
     </div>
